@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import { connectDB } from "./database/mongodb";
+import userRoutes from "./routes/user.route";
+
 
 dotenv.config();
 const app = express();
@@ -13,6 +15,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.get("/", (req, res) => res.json({ message: "CoffeeShop API is running" }));
+
+app.use("/api/v1/auth", userRoutes);
 
 connectDB().then(() => {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
