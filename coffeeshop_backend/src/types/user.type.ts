@@ -16,3 +16,22 @@ export interface AuthResponse {
   token: string;
   user: { id: string; name: string; email: string; role: string; avatar?: string; provider: string };
 }
+
+export const GoogleLoginSchema = z.object({ idToken: z.string().min(1, "Google ID token is required") });
+
+export const RequestPasswordChangeSchema = z.object({ currentPassword: z.string().min(1, "Current password is required") });
+export const ConfirmPasswordChangeSchema = z.object({
+  code: z.string().length(6, "Enter the 6-digit code"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+});
+
+export const ForgotPasswordRequestSchema = z.object({ email: z.string().email("Invalid email address") });
+export const ForgotPasswordVerifySchema = z.object({
+  email: z.string().email("Invalid email address"),
+  code: z.string().length(6, "Enter the 6-digit code"),
+});
+export const ForgotPasswordResetSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  code: z.string().length(6, "Enter the 6-digit code"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+});

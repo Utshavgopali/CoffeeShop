@@ -1,9 +1,12 @@
-import { Router } from "express";
-import { register, login, whoami } from "../controllers/user.controller";
-import { protect } from "../middleware/auth";
+import {
+  register, login, googleLogin, whoami,
+  requestPasswordChange, confirmPasswordChange,
+  forgotPasswordRequest, forgotPasswordVerify, forgotPasswordReset,
+} from "../controllers/user.controller";
 
-const router = Router();
-router.post("/register", register);
-router.post("/login", login);
-router.get("/whoami", protect, whoami);
-export default router;
+router.post("/google", googleLogin);
+router.post("/forgot-password/request", forgotPasswordRequest);
+router.post("/forgot-password/verify", forgotPasswordVerify);
+router.post("/forgot-password/reset", forgotPasswordReset);
+router.post("/change-password/request-code", protect, requestPasswordChange);
+router.patch("/change-password/confirm", protect, confirmPasswordChange);

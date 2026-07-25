@@ -31,3 +31,63 @@ export async function loginService(data: LoginDTO): Promise<AuthResponse> {
   const token = jwt.sign({ id: String(user._id) }, JWT_SECRET, { expiresIn: "7d" });
   return toAuthResponse(user, token);
 }
+
+import crypto from "crypto";
+import { findUserByGoogleId, createGoogleUser } from "../repositories/user.repository";
+import { verifyGoogleIdToken } from "../utils/googleAuth";
+import { sendForgotPasswordCode } from "../utils/mailer";
+
+export async function googleLoginService(idToken: string): Promise<AuthResponse> {
+  const profile = await verifyGoogleIdToken(idToken);
+  let user = await findUserByGoogleId(profile.googleId);
+  if (!user) {
+    const existingLocal = await findUserByEmail(profile.email);
+    if (existingLocal) {
+      existingLocal.googleId = profile.googleId;
+      existingLocal.provider = "google";
+      if (!existingLocal.avatar && profile.avatar) existingLocal.avatar = profile.avatar;
+      await existingLocal.save();
+      user = existingLocal;
+    } else {
+      user = await createGoogleUser(profile.name, profile.email, profile.googleId, profile.avatar);
+    }
+  }
+  const token = jwt.sign({ id: String(user._id) }, JWT_SECRET, { expiresIn: "7d" });
+  return toAuthResponse(user, token);
+}
+
+export async function forgotPasswordRequestService(email: string): Promise<void> {
+  const user = await findUserByEmail(email);
+  if (!user) return; // don't reveal existence
+  const code = crypto.randomInt(100000, 999999).toString();
+  const salt = await bcrypt.genSalt(10);
+  user.resetPasswordCode = await bcrypt.hash(code, salt);
+  user.resetPasswordCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
+  user.resetPasswordVerified = false;
+  await user.save();
+  await sendForgotPasswordCode(user.email, code);
+}
+
+export async function forgotPasswordVerifyService(email: string, code: string): Promise<void> {
+  const user = await User.findOne({ email }).select("+resetPasswordCode +resetPasswordCodeExpires +resetPasswordVerified");
+  if (!user || !user.resetPasswordCode || !user.resetPasswordCodeExpires) throw new Error("No pending reset request. Please request a new code.");
+  if (user.resetPasswordCodeExpires.getTime() < Date.now()) throw new Error("This code has expired. Please request a new one.");
+  const matches = await bcrypt.compare(code, user.resetPasswordCode);
+  if (!matches) throw new Error("Invalid verification code");
+  user.resetPasswordVerified = true;
+  await user.save();
+}
+
+export async function forgotPasswordResetService(email: string, code: string, newPassword: string): Promise<void> {
+  const user = await User.findOne({ email }).select("+resetPasswordCode +resetPasswordCodeExpires +resetPasswordVerified");
+  if (!user || !user.resetPasswordCode || !user.resetPasswordCodeExpires) throw new Error("No pending reset request. Please request a new code.");
+  if (user.resetPasswordCodeExpires.getTime() < Date.now()) throw new Error("This code has expired. Please request a new one.");
+  const matches = await bcrypt.compare(code, user.resetPasswordCode);
+  if (!matches) throw new Error("Invalid verification code");
+  user.password = await bcrypt.hash(newPassword, 10);
+  user.resetPasswordCode = undefined;
+  user.resetPasswordCodeExpires = undefined;
+  user.resetPasswordVerified = false;
+  user.provider = "local";
+  await user.save();
+}
