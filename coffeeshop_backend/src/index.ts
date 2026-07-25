@@ -9,6 +9,7 @@ import { connectDB } from "./database/mongodb";
 import userRoutes from "./routes/user.route";
 import beanRoutes from "./routes/bean.route";
 import cartRoutes from "./routes/cart.route";
+import orderRoutes from "./routes/order.route";
 import wishlistRoutes from "./routes/wishlist.route";
 import notificationRoutes from "./routes/notification.route";
 
@@ -29,6 +30,7 @@ app.use(cookieParser());
 app.use("/api/v1/auth", userRoutes);
 app.use("/api/v1/beans", beanRoutes);
 app.use("/api/v1/cart", cartRoutes);
+app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/wishlist", wishlistRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
