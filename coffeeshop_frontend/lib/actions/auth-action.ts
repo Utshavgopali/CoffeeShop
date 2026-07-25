@@ -1,96 +1,197 @@
-import Cookies from 'js-cookie'
-import api from '../api/axios'
-import { ENDPOINTS } from '../api/endpoints'
-import type { LoginValues, RegisterValues, User } from '../types/auth'
+"use server";
+import { setTokenCookie, storeUserData, clearAuthCookies, getTokenCookie } from "@/lib/cookies";
+import { ENDPOINTS } from "@/lib/api/endpoints";
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; message: string }
+const API = "http://localhost:5000";
 
-function toError(err: any): ActionResult<never> {
-  const res = err?.response?.data
-  return { ok: false, message: res?.message || 'Something went wrong. Please try again.' }
+interface AuthApiResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    token: string;
+    user: { id: string; name: string; email: string; role: string; avatar?: string; provider: string };
+  };
 }
 
-const USER_COOKIE_OPTS = { expires: 7, sameSite: 'lax' as const, path: '/' }
+async function persistAuth(data: NonNullable<AuthApiResponse["data"]>) {
+  await setTokenCookie(data.token);
+  await storeUserData(data.user);
+  return data.user.role === "admin" ? "/admin" : "/shop";
+}
 
-// REGISTER
-export async function registerAction(values: RegisterValues): Promise<ActionResult<User>> {
+export async function loginAction(formData: FormData) {
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
   try {
-    const { data } = await api.post(ENDPOINTS.auth.register, {
-      name: values.name, email: values.email, password: values.password,
-    })
-    const user = data.data.user as User
-    Cookies.set('token', data.data.token, USER_COOKIE_OPTS)
-    Cookies.set('user', JSON.stringify(user), USER_COOKIE_OPTS)
-    return { ok: true, data: user }
-  } catch (err) { return toError(err) }
+    const res = await fetch(`${API}${ENDPOINTS.AUTH.LOGIN}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const result = (await res.json()) as AuthApiResponse;
+    if (!res.ok || !result.data) return { success: false, message: result.message || "Login failed" };
+
+    const redirectTo = await persistAuth(result.data);
+    return { success: true, user: result.data.user, redirectTo };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  }
 }
 
-// LOGIN
-export async function loginAction(values: LoginValues): Promise<ActionResult<{ token: string; user: User }>> {
+export async function registerAction(formData: FormData) {
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
   try {
-    const { data } = await api.post(ENDPOINTS.auth.login, values)
-    const { token, user } = data.data
-    Cookies.set('token', token, USER_COOKIE_OPTS)
-    Cookies.set('user', JSON.stringify(user), USER_COOKIE_OPTS)
-    return { ok: true, data: { token, user } }
-  } catch (err) { return toError(err) }
+    const res = await fetch(`${API}${ENDPOINTS.AUTH.REGISTER}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const result = (await res.json()) as AuthApiResponse;
+    if (!res.ok || !result.data) return { success: false, message: result.message || "Registration failed" };
+
+    const redirectTo = await persistAuth(result.data);
+    return { success: true, user: result.data.user, redirectTo };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  }
 }
 
-// LOGOUT
-export function logoutAction() {
-  Cookies.remove('token')
-  Cookies.remove('user')
-  api.post(ENDPOINTS.auth.logout).catch(() => {})
-}
-
-// GET CACHED USER
-export function getCurrentUser(): User | null {
-  const raw = Cookies.get('user')
-  if (!raw) return null
-  try { return JSON.parse(raw) as User } catch { return null }
-}
-
-// WHOAMI — confirms with server, refreshes cache
-export async function fetchMe(): Promise<User | null> {
+// Called after Google Identity Services returns an ID token client-side.
+export async function googleLoginAction(idToken: string) {
   try {
-    const { data } = await api.get(ENDPOINTS.auth.whoami)
-    const user = data.data as User
-    Cookies.set('user', JSON.stringify(user), USER_COOKIE_OPTS)
-    return user
-  } catch { return null }
+    const res = await fetch(`${API}${ENDPOINTS.AUTH.GOOGLE}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+    const result = (await res.json()) as AuthApiResponse;
+    if (!res.ok || !result.data) return { success: false, message: result.message || "Google sign-in failed" };
+
+    const redirectTo = await persistAuth(result.data);
+    return { success: true, user: result.data.user, redirectTo };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  }
 }
 
-// UPDATE PROFILE
-export async function updateProfileAction(input: {
-  name: string; email: string; avatar?: File | null
-}): Promise<ActionResult<User>> {
-  try {
-    const fd = new FormData()
-    fd.append('name', input.name)
-    fd.append('email', input.email)
-    if (input.avatar) fd.append('avatar', input.avatar)
-    const { data } = await api.patch(ENDPOINTS.auth.update, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    const user = data.data as User
-    Cookies.set('user', JSON.stringify(user), USER_COOKIE_OPTS)
-    return { ok: true, data: user }
-  } catch (err) { return toError(err) }
+export async function logoutAction() {
+  await clearAuthCookies();
+  return { success: true };
 }
 
-// CHANGE PASSWORD
-export async function changePasswordAction(input: {
-  currentPassword: string; newPassword: string
-}): Promise<ActionResult<User>> {
+export async function whoamiAction() {
+  const token = await getTokenCookie();
+  if (!token) return null;
+
+  const res = await fetch(`${API}${ENDPOINTS.AUTH.WHOAMI}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { success: boolean; data: any };
+  return data.data;
+}
+
+export async function updateProfileAction(formData: FormData) {
+  const token = await getTokenCookie();
+  const res = await fetch(`${API}${ENDPOINTS.AUTH.UPDATE}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error("Update failed");
+  const data = (await res.json()) as { success: boolean; data: any };
+
+  await storeUserData({
+    id: data.data._id,
+    name: data.data.name,
+    email: data.data.email,
+    role: data.data.role,
+    avatar: data.data.avatar,
+    provider: data.data.provider,
+  });
+
+  return data.data;
+}
+
+// ----- Logged-in change-password OTP flow -----
+export async function requestPasswordChangeAction(currentPassword: string) {
+  const token = await getTokenCookie();
   try {
-    const fd = new FormData()
-    fd.append('currentPassword', input.currentPassword)
-    fd.append('newPassword', input.newPassword)
-    const { data } = await api.patch(ENDPOINTS.auth.update, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    return { ok: true, data: data.data as User }
-  } catch (err) { return toError(err) }
+    const res = await fetch(`${API}${ENDPOINTS.AUTH.REQUEST_PASSWORD_CHANGE}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword }),
+    });
+    const result = (await res.json()) as { success?: boolean; message?: string };
+    if (!res.ok) return { success: false, message: result.message || "Failed to send verification code" };
+    return { success: true, message: result.message || "Code sent" };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  }
+}
+
+export async function confirmPasswordChangeAction(data: { code: string; newPassword: string }) {
+  const token = await getTokenCookie();
+  try {
+    const res = await fetch(`${API}${ENDPOINTS.AUTH.CONFIRM_PASSWORD_CHANGE}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const result = (await res.json()) as { success?: boolean; message?: string };
+    if (!res.ok) return { success: false, message: result.message || "Failed to update password" };
+    return { success: true, message: result.message || "Password updated successfully" };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  }
+}
+
+// ----- Logged-out forgot-password OTP flow -----
+export async function forgotPasswordRequestAction(email: string) {
+  try {
+    const res = await fetch(`${API}${ENDPOINTS.AUTH.FORGOT_PASSWORD_REQUEST}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const result = (await res.json()) as { success?: boolean; message?: string };
+    if (!res.ok) return { success: false, message: result.message || "Failed to send code" };
+    return { success: true, message: result.message || "Code sent" };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  }
+}
+
+export async function forgotPasswordVerifyAction(email: string, code: string) {
+  try {
+    const res = await fetch(`${API}${ENDPOINTS.AUTH.FORGOT_PASSWORD_VERIFY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
+    const result = (await res.json()) as { success?: boolean; message?: string };
+    if (!res.ok) return { success: false, message: result.message || "Invalid or expired code" };
+    return { success: true, message: result.message || "Code verified" };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  }
+}
+
+export async function forgotPasswordResetAction(email: string, code: string, newPassword: string) {
+  try {
+    const res = await fetch(`${API}${ENDPOINTS.AUTH.FORGOT_PASSWORD_RESET}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+    const result = (await res.json()) as { success?: boolean; message?: string };
+    if (!res.ok) return { success: false, message: result.message || "Failed to reset password" };
+    return { success: true, message: result.message || "Password reset successfully" };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  }
 }
