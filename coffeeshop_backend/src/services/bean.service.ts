@@ -1,4 +1,4 @@
-import { createBean, findBeanById, updateBeanById, deleteBeanById, getAllBeansPaginated, BeanFilter } from "../repositories/bean.repository";
+import { createBean, findBeanById, updateBeanById, deleteBeanById, getAllBeansPaginated, getBeanFacets, BeanFilter } from "../repositories/bean.repository";
 import type { CreateBeanDTO } from "../dtos/bean.dto";
 import type { IBean } from "../models/bean.model";
 
@@ -21,4 +21,8 @@ export async function deleteBeanService(id: string): Promise<void> {
 }
 export async function listBeansService(page: number, limit: number, filter: BeanFilter, sort?: string) {
   return getAllBeansPaginated(page, limit, filter, sort);
+}
+
+export async function getBeanFacetsService(category?: string) {
+  return getBeanFacets(category);
 }
