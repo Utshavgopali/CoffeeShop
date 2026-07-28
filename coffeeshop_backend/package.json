@@ -6,7 +6,8 @@
     "dev": "npx tsx --watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "seed": "npx tsx src/scripts/seedCatalog.ts"
+    "seed": "npx tsx src/scripts/seedCatalog.ts",
+    "make-admin": "npx tsx src/scripts/makeAdmin.ts"
   },
   "dependencies": {
     "axios": "^1.17.0",

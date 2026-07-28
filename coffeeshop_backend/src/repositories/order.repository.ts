@@ -16,6 +16,11 @@ export async function updateOrderById(id: string, data: Partial<IOrder>): Promis
   return Order.findByIdAndUpdate(id, data, { new: true });
 }
 
+export async function userHasPurchasedBean(userId: string, beanId: string): Promise<boolean> {
+  const exists = await Order.exists({ user: userId, status: "paid", "items.bean": beanId });
+  return !!exists;
+}
+
 export async function getAllOrdersPaginated(
   page: number,
   limit: number

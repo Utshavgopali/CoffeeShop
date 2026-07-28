@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PROTECTED = ['/dashboard', '/profile', '/password']
+const PROTECTED = ['/profile', '/orders', '/wishlist', '/admin', '/notifications', '/checkout']
 const AUTH_PAGES = ['/login', '/register']
 
 export function middleware(req: NextRequest) {
-  const token = req.cookies.get('token')?.value
+  const token = req.cookies.get('auth_token')?.value
   const { pathname } = req.nextUrl
 
   const isProtected = PROTECTED.some((p) => pathname === p || pathname.startsWith(p + '/'))
@@ -20,7 +20,7 @@ export function middleware(req: NextRequest) {
 
   if (isAuthPage && token) {
     const url = req.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
@@ -28,5 +28,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/profile/:path*', '/password/:path*', '/login', '/register'],
+  matcher: ['/profile/:path*', '/orders/:path*', '/wishlist/:path*', '/admin/:path*', '/notifications/:path*', '/checkout/:path*', '/login', '/register'],
 }

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { listAllOrdersService } from "../../services/order.service";
+import { listAllOrdersService, adminCancelOrderService } from "../../services/order.service";
 import { sendSuccess, sendError } from "../../utils/apiResponse";
 
 export async function listOrders(req: Request, res: Response) {
@@ -15,5 +15,15 @@ export async function listOrders(req: Request, res: Response) {
     });
   } catch (error: any) {
     return sendError(res, error.message || "Internal server error", 500);
+  }
+}
+
+// @route  PATCH /api/v1/admin/orders/:id/cancel
+export async function cancelOrder(req: Request<{ id: string }>, res: Response) {
+  try {
+    const order = await adminCancelOrderService(req.params.id);
+    return sendSuccess(res, order, "Order cancelled");
+  } catch (error: any) {
+    return sendError(res, error.message || "Internal server error", 400);
   }
 }
