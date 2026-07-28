@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import { UserProvider } from "@/context/UserContext";
 import { CartProvider } from "@/context/CartContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 import GoogleAuthProvider from "@/context/GoogleAuthProvider";
 
 const fraunces = Fraunces({
@@ -35,11 +36,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable} ${plexMono.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${fraunces.variable} ${inter.variable} ${plexMono.variable}`}>
       <body>
         <GoogleAuthProvider>
           <UserProvider>
-            <CartProvider>{children}</CartProvider>
+            <CartProvider>
+              <WishlistProvider>{children}</WishlistProvider>
+            </CartProvider>
           </UserProvider>
         </GoogleAuthProvider>
       </body>
