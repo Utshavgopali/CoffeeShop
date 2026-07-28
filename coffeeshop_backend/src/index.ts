@@ -12,6 +12,7 @@ import cartRoutes from "./routes/cart.route";
 import orderRoutes from "./routes/order.route";
 import wishlistRoutes from "./routes/wishlist.route";
 import notificationRoutes from "./routes/notification.route";
+import reviewRoutes from "./routes/review.route";
 
 import adminUserRoutes from "./routes/admin/user.route";
 import adminBeanRoutes from "./routes/admin/bean.route";
@@ -32,10 +33,11 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/avatars", express.static(path.join(__dirname, "../public/avatars")));
-app.use("/beans", express.static(path.join(__dirname, "../public/beans")));
+app.use("/uploads/beans", express.static(path.join(__dirname, "../public/beans")));
 
 app.use("/api/v1/auth", userRoutes);
 app.use("/api/v1/beans", beanRoutes);
+app.use("/api/v1/beans/:beanId/reviews", reviewRoutes);
 app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/wishlist", wishlistRoutes);
