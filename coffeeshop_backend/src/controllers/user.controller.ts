@@ -1,120 +1,155 @@
-import type { Request, Response } from "express";
-import {
-  registerService,
-  loginService,
-  getMeService,
-  updateProfileService,
-  changePasswordService,
-} from "../services/user.service";
-import {
-  RegisterSchema,
-  LoginSchema,
-  UpdateProfileSchema,
-  ChangePasswordSchema,
-} from "../types/user.type";
+import type { Response } from "express";
+import type { Request } from "express-serve-static-core";
+import { registerService, loginService } from "../services/user.service";
+import { RegisterSchema, LoginSchema } from "../types/user.type";
+import User from "../models/user.model";
+import { sendSuccess, sendError } from "../utils/apiResponse";
 
-const COOKIE_OPTS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: "/",
-};
+function firstIssue(parsed: any) { return parsed.error?.issues?.[0]?.message || "Validation failed"; }
 
-// Helper: empty strings from multipart forms should be treated as absent.
-const clean = (v: unknown) =>
-  typeof v === "string" && v.trim() === "" ? undefined : v;
-
-// POST /api/auth/register
 export async function register(req: Request, res: Response) {
   try {
     const parsed = RegisterSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Validation failed", errors: parsed.error.issues });
-      return;
-    }
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
     const result = await registerService(parsed.data);
-    res.cookie("token", result.token, COOKIE_OPTS);
-    res.status(201).json({ success: true, message: "Account created successfully", data: result });
+    return sendSuccess(res, result, "Registered successfully", 201);
   } catch (error: unknown) {
-    const err = error as any;
-    res.status(err.status ?? 400).json({ message: err.message ?? "Something went wrong" });
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 400);
   }
 }
 
-// POST /api/auth/login
 export async function login(req: Request, res: Response) {
   try {
     const parsed = LoginSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Validation failed", errors: parsed.error.issues });
-      return;
-    }
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
     const result = await loginService(parsed.data);
-    res.cookie("token", result.token, COOKIE_OPTS);
-    res.status(200).json({ success: true, message: "Logged in successfully", data: result });
+    return sendSuccess(res, result, "Logged in successfully");
   } catch (error: unknown) {
-    const err = error as any;
-    res.status(err.status ?? 400).json({ message: err.message ?? "Something went wrong" });
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 400);
   }
 }
 
-// POST /api/auth/logout  (protected)
-export async function logout(_req: Request, res: Response) {
-  res.clearCookie("token", { ...COOKIE_OPTS, maxAge: undefined });
-  res.status(200).json({ success: true, message: "Logged out" });
-}
-
-// GET /api/auth/whoami  (protected)
-export async function getMe(req: Request, res: Response) {
+export async function whoami(req: Request, res: Response) {
   try {
-    const userId = (req as any).userId as string;
-    const user = await getMeService(userId);
-    if (!user) { res.status(404).json({ message: "User not found" }); return; }
-    res.status(200).json({ success: true, data: user });
+    const user = await User.findById((req as any).user.id).select("-password");
+    if (!user) return sendError(res, "User not found", 404);
+    return sendSuccess(res, user);
   } catch (error: unknown) {
-    const err = error as any;
-    res.status(err.status ?? 500).json({ message: err.message ?? "Something went wrong" });
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 500);
   }
 }
 
-// PATCH /api/auth/update  (protected, multipart)
-// - sends newPassword → change password path
-// - otherwise       → update profile (name / email / avatar)
-export async function update(req: Request, res: Response) {
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import {
+  googleLoginService, forgotPasswordRequestService, forgotPasswordVerifyService, forgotPasswordResetService,
+  updateProfileService,
+} from "../services/user.service";
+import {
+  GoogleLoginSchema, RequestPasswordChangeSchema, ConfirmPasswordChangeSchema,
+  ForgotPasswordRequestSchema, ForgotPasswordVerifySchema, ForgotPasswordResetSchema,
+  UpdateProfileSchema,
+} from "../types/user.type";
+import { sendPasswordChangeCode } from "../utils/mailer";
+
+export async function googleLogin(req: Request, res: Response) {
   try {
-    const userId = (req as any).userId as string;
+    const parsed = GoogleLoginSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
+    const result = await googleLoginService(parsed.data.idToken);
+    return sendSuccess(res, result, "Logged in with Google");
+  } catch (error: unknown) {
+    return sendError(res, error instanceof Error ? error.message : "Google sign-in failed", 400);
+  }
+}
 
-    const currentPassword = clean(req.body.currentPassword) as string | undefined;
-    const newPassword     = clean(req.body.newPassword)     as string | undefined;
+export async function requestPasswordChange(req: Request, res: Response) {
+  try {
+    const parsed = RequestPasswordChangeSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
+    const user = await User.findById((req as any).user.id).select("+password +passwordChangeCode +passwordChangeCodeExpires");
+    if (!user || !user.password) return sendError(res, "Password login is not set up for this account", 400);
+    const isMatch = await bcrypt.compare(parsed.data.currentPassword, user.password);
+    if (!isMatch) return sendError(res, "Current password is incorrect", 400);
+    const code = crypto.randomInt(100000, 999999).toString();
+    const salt = await bcrypt.genSalt(10);
+    user.passwordChangeCode = await bcrypt.hash(code, salt);
+    user.passwordChangeCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+    await sendPasswordChangeCode(user.email, code);
+    return sendSuccess(res, null, `Verification code sent to ${user.email}`);
+  } catch (error: unknown) {
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 500);
+  }
+}
 
-    // --- Password change branch ---
-    if (currentPassword !== undefined || newPassword !== undefined) {
-      const parsed = ChangePasswordSchema.safeParse({ currentPassword, newPassword });
-      if (!parsed.success) {
-        res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Validation failed", errors: parsed.error.issues });
-        return;
-      }
-      const user = await changePasswordService(userId, parsed.data.currentPassword, parsed.data.newPassword);
-      res.status(200).json({ success: true, message: "Password updated successfully", data: user });
-      return;
+export async function confirmPasswordChange(req: Request, res: Response) {
+  try {
+    const parsed = ConfirmPasswordChangeSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
+    const user = await User.findById((req as any).user.id).select("+passwordChangeCode +passwordChangeCodeExpires");
+    if (!user) return sendError(res, "User not found", 404);
+    if (!user.passwordChangeCode || !user.passwordChangeCodeExpires) return sendError(res, "No pending code. Please request a new one.", 400);
+    if (user.passwordChangeCodeExpires.getTime() < Date.now()) return sendError(res, "This code has expired. Please request a new one.", 400);
+    const codeMatches = await bcrypt.compare(parsed.data.code, user.passwordChangeCode);
+    if (!codeMatches) return sendError(res, "Invalid verification code", 400);
+    user.password = await bcrypt.hash(parsed.data.newPassword, 10);
+    user.passwordChangeCode = undefined;
+    user.passwordChangeCodeExpires = undefined;
+    await user.save();
+    return sendSuccess(res, null, "Password updated successfully");
+  } catch (error: unknown) {
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 500);
+  }
+}
+
+export async function updateProfile(req: Request, res: Response) {
+  try {
+    const parsed = UpdateProfileSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
+
+    const updateData: Record<string, any> = { ...parsed.data };
+    if ((req as any).file) {
+      updateData.avatar = `/avatars/${(req as any).file.filename}`;
     }
 
-    // --- Profile update branch ---
-    const parsed = UpdateProfileSchema.safeParse({
-      name:  clean(req.body.name),
-      email: clean(req.body.email),
-    });
-    if (!parsed.success) {
-      res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Validation failed", errors: parsed.error.issues });
-      return;
-    }
-
-    const avatar = (req as any).file?.filename as string | undefined;
-    const user = await updateProfileService(userId, { ...parsed.data, avatar });
-    res.status(200).json({ success: true, message: "Profile updated successfully", data: user });
+    const user = await updateProfileService((req as any).user.id, updateData);
+    return sendSuccess(res, user, "Profile updated successfully");
   } catch (error: unknown) {
-    const err = error as any;
-    res.status(err.status ?? 500).json({ message: err.message ?? "Something went wrong" });
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 400);
   }
 }
+
+export async function forgotPasswordRequest(req: Request, res: Response) {
+  try {
+    const parsed = ForgotPasswordRequestSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
+    await forgotPasswordRequestService(parsed.data.email);
+    return sendSuccess(res, null, "If that email is registered, a code has been sent to it.");
+  } catch (error: unknown) {
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 500);
+  }
+}
+
+export async function forgotPasswordVerify(req: Request, res: Response) {
+  try {
+    const parsed = ForgotPasswordVerifySchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
+    await forgotPasswordVerifyService(parsed.data.email, parsed.data.code);
+    return sendSuccess(res, null, "Code verified. You can now set a new password.");
+  } catch (error: unknown) {
+    return sendError(res, error instanceof Error ? error.message : "Invalid or expired code", 400);
+  }
+}
+
+export async function forgotPasswordReset(req: Request, res: Response) {
+  try {
+    const parsed = ForgotPasswordResetSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
+    await forgotPasswordResetService(parsed.data.email, parsed.data.code, parsed.data.newPassword);
+    return sendSuccess(res, null, "Password reset successfully. You can now log in.");
+  } catch (error: unknown) {
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 400);
+  }
+}
+
