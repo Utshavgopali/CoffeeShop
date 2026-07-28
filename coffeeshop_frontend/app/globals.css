@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+@theme {
+  /* Roast palette — warm cream surfaces, deep espresso text, gold accent */
+  --color-roast-950: #faf6ef;
+  --color-roast-900: #ffffff;
+  --color-roast-850: #f4ead6;
+  --color-roast-800: #ecdfc2;
+  --color-roast-700: #ddc691;
+  --color-roast-600: #c7a568;
+  --color-roast-500: #a9835a;
+
+  --color-ivory: #2b1c10;
+  --color-ivory-dim: #6b5842;
+
+  /* Dark text reserved for use on top of gold/accent-colored surfaces (buttons, badges) */
+  --color-ink: #1a0f08;
+
+  --color-gold: #9c6c0c;
+  --color-gold-bright: #c4901f;
+  --color-gold-dim: #7a5a1f;
+
+  --color-moss: #3f7a3a;
+  --color-moss-bright: #2f6b2a;
+
+  --color-clay: #9c4a30;
+
+  --font-display: var(--font-fraunces), "Fraunces", serif;
+  --font-body: var(--font-inter), "Inter", sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: var(--color-roast-950);
+  color: var(--color-ivory);
+  font-family: var(--font-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background-color: var(--color-gold);
+  color: var(--color-ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-roast-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-roast-600);
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Roast-level dial — the site's signature recurring element */
+.roast-dial {
+  --dial-fill: 25%;
+  position: relative;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d9c39c 0%, #b3854f 35%, #7a4c2c 65%, #3b2216 100%);
+  overflow: hidden;
+}
+.roast-dial::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: calc(100% - var(--dial-fill));
+  background: var(--color-roast-950);
+  opacity: 0.55;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* Dual-thumb price range slider — two overlaid <input type="range"> tracks
+   with everything but the thumb made pointer-events:none, so each handle
+   can be dragged independently. */
+.range-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--color-gold);
+  border: 2px solid var(--color-roast-950);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.range-thumb::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--color-gold);
+  border: 2px solid var(--color-roast-950);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.range-thumb::-moz-range-track {
+  background: transparent;
+}
