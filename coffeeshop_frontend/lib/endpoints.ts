@@ -17,6 +17,11 @@ export const ENDPOINTS = {
   BEANS: {
     LIST: `${BASE}/beans`,
     DETAIL: (id: string) => `${BASE}/beans/${id}`,
+    FACETS: `${BASE}/beans/facets`,
+  },
+  REVIEWS: {
+    LIST: (beanId: string) => `${BASE}/beans/${beanId}/reviews`,
+    MINE: (beanId: string) => `${BASE}/beans/${beanId}/reviews/mine`,
   },
   CART: {
     GET: `${BASE}/cart`,
@@ -58,6 +63,10 @@ export const ENDPOINTS = {
     },
     ORDERS: {
       LIST: `${BASE}/admin/orders`,
+      CANCEL: (id: string) => `${BASE}/admin/orders/${id}/cancel`,
+    },
+    NOTIFICATIONS: {
+      BROADCAST: `${BASE}/admin/notifications/broadcast`,
     },
   },
 };

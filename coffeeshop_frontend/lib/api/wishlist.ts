@@ -1,5 +1,5 @@
 import axiosInstance from "./axios-instance";
-import { ENDPOINTS } from "./endpoints";
+import { ENDPOINTS } from "@/lib/endpoints";
 import type { Bean } from "./beans";
 
 export interface WishlistItem {

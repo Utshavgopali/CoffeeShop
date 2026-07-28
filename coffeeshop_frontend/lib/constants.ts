@@ -6,10 +6,10 @@ export const BEAN_CATEGORIES = [
 ] as const;
 
 export const ROAST_LEVELS = [
-  { value: "light", label: "Light", dial: "20%" },
-  { value: "medium", label: "Medium", dial: "45%" },
-  { value: "medium-dark", label: "Medium-Dark", dial: "70%" },
-  { value: "dark", label: "Dark", dial: "95%" },
+  { value: "light", label: "Light", dial: "20%", wash: "#e3b872" },
+  { value: "medium", label: "Medium", dial: "45%", wash: "#cf9548" },
+  { value: "medium-dark", label: "Medium-Dark", dial: "70%", wash: "#b5762f" },
+  { value: "dark", label: "Dark", dial: "95%", wash: "#8f5a24" },
 ] as const;
 
 export const PROCESS_METHODS = [

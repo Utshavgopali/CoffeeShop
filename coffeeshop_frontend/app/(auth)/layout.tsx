@@ -1,5 +1,4 @@
 import Logo from "@/app/_components/logo";
-import Link from "next/link";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,9 +12,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         aria-hidden="true"
       />
       <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-12">
-        <Link href="/" className="mb-8">
-          <Logo />
-        </Link>
+        <Logo className="mb-8" />
         {children}
       </div>
     </div>

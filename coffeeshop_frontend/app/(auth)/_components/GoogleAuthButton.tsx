@@ -4,9 +4,11 @@ import { GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { googleLoginAction } from "@/lib/actions/auth-action";
+import { useUser } from "@/context/UserContext";
 
 export default function GoogleAuthButton() {
   const router = useRouter();
+  const { setUser } = useUser();
   const [error, setError] = useState("");
 
   const hasClientId = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
@@ -32,7 +34,15 @@ export default function GoogleAuthButton() {
             return;
           }
           const result = await googleLoginAction(credentialResponse.credential);
-          if (result.success) {
+          if (result.success && result.user) {
+            setUser({
+              _id: result.user.id,
+              name: result.user.name,
+              email: result.user.email,
+              avatar: result.user.avatar,
+              role: result.user.role as "user" | "admin",
+              provider: result.user.provider as "local" | "google",
+            });
             router.push(result.redirectTo || "/shop");
           } else {
             setError(result.message || "Google sign-in failed");

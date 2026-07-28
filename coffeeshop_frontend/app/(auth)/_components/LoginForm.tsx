@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { loginSchema } from "./schema";
 import { loginAction } from "@/lib/actions/auth-action";
 import GoogleAuthButton from "./GoogleAuthButton";
+import { useUser } from "@/context/UserContext";
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { setUser } = useUser();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const justRegistered = searchParams.get("registered") === "true";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,7 +45,15 @@ export default function LoginForm() {
     const result = await loginAction(formData);
     setLoading(false);
 
-    if (result.success) {
+    if (result.success && result.user) {
+      setUser({
+        _id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        avatar: result.user.avatar,
+        role: result.user.role as "user" | "admin",
+        provider: result.user.provider as "local" | "google",
+      });
       router.push(result.redirectTo || "/shop");
     } else {
       setError(result.message || "Login failed");
@@ -49,9 +61,15 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-roast-700 bg-roast-900 p-8 shadow-2xl shadow-black/40">
+    <div className="w-full max-w-md rounded-2xl border border-roast-700 bg-roast-900 p-8 shadow-xl shadow-ink/10">
       <h1 className="font-display text-2xl text-ivory">Welcome back</h1>
       <p className="mt-1 font-body text-sm text-ivory-dim">Sign in to keep your beans stocked.</p>
+
+      {justRegistered && !error && (
+        <div className="mt-5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+          Account created successfully. Please sign in.
+        </div>
+      )}
 
       {error && (
         <div className="mt-5 rounded-lg border border-clay/40 bg-clay/10 px-4 py-3 text-sm text-clay">
@@ -107,7 +125,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-roast-950 transition hover:bg-gold-bright disabled:opacity-60"
+          className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-ink transition hover:bg-gold-bright disabled:opacity-60"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>

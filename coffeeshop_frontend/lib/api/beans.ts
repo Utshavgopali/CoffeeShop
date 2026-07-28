@@ -1,5 +1,5 @@
 import axiosInstance from "./axios-instance";
-import { ENDPOINTS } from "./endpoints";
+import { ENDPOINTS } from "@/lib/endpoints";
 
 export interface Bean {
   _id: string;
@@ -15,6 +15,7 @@ export interface Bean {
   stock: number;
   images: string[];
   featured: boolean;
+  createdAt: string;
 }
 
 export interface BeanListParams {
@@ -22,7 +23,9 @@ export interface BeanListParams {
   limit?: number;
   search?: string;
   category?: string;
-  roastLevel?: string;
+  roastLevel?: string[];
+  origin?: string[];
+  weightGrams?: number[];
   minPrice?: number;
   maxPrice?: number;
   featured?: boolean;
@@ -35,9 +38,27 @@ export interface Paginated<T> {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
+export interface BeanFacets {
+  roastLevel: Record<string, number>;
+  origin: Record<string, number>;
+  weightGrams: Record<string, number>;
+}
+
 export async function listBeans(params: BeanListParams = {}): Promise<Paginated<Bean>> {
-  const res = await axiosInstance.get(ENDPOINTS.BEANS.LIST, { params });
+  const res = await axiosInstance.get(ENDPOINTS.BEANS.LIST, {
+    params: {
+      ...params,
+      roastLevel: params.roastLevel?.join(",") || undefined,
+      origin: params.origin?.join(",") || undefined,
+      weightGrams: params.weightGrams?.join(",") || undefined,
+    },
+  });
   return res.data;
+}
+
+export async function getBeanFacets(category?: string): Promise<BeanFacets> {
+  const res = await axiosInstance.get(ENDPOINTS.BEANS.FACETS, { params: { category } });
+  return res.data.data;
 }
 
 export async function getBean(id: string): Promise<Bean> {

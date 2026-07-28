@@ -117,7 +117,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-roast-700 bg-roast-900 p-8 shadow-2xl shadow-black/40">
+    <div className="w-full max-w-md rounded-2xl border border-roast-700 bg-roast-900 p-8 shadow-xl shadow-ink/10">
       <Link href="/login" className="mb-6 flex items-center gap-1.5 font-mono text-xs text-ivory-dim hover:text-gold">
         <ArrowLeft size={14} /> Back to sign in
       </Link>
@@ -132,7 +132,7 @@ export default function ForgotPasswordPage() {
               <div key={s.key} className="flex flex-1 items-center gap-2">
                 <div
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] ${
-                    isDone ? "bg-gold text-roast-950" : isActive ? "border border-gold text-gold" : "border border-roast-600 text-ivory-dim"
+                    isDone ? "bg-gold text-ink" : isActive ? "border border-gold text-gold" : "border border-roast-600 text-ivory-dim"
                   }`}
                 >
                   {isDone ? "✓" : idx + 1}
@@ -172,7 +172,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-roast-950 transition hover:bg-gold-bright disabled:opacity-60"
+              className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-ink transition hover:bg-gold-bright disabled:opacity-60"
             >
               {loading ? "Sending code..." : "Send code"}
             </button>
@@ -201,7 +201,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-roast-950 transition hover:bg-gold-bright disabled:opacity-60"
+              className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-ink transition hover:bg-gold-bright disabled:opacity-60"
             >
               {loading ? "Verifying..." : "Verify code"}
             </button>
@@ -243,7 +243,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-roast-950 transition hover:bg-gold-bright disabled:opacity-60"
+              className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-ink transition hover:bg-gold-bright disabled:opacity-60"
             >
               {loading ? "Saving..." : "Reset password"}
             </button>

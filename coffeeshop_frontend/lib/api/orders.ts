@@ -1,5 +1,5 @@
 import axiosInstance from "./axios-instance";
-import { ENDPOINTS } from "./endpoints";
+import { ENDPOINTS } from "@/lib/endpoints";
 
 export interface ShippingAddress {
   fullName: string;
@@ -37,5 +37,10 @@ export async function verifyPayment(pidx: string): Promise<Order> {
 
 export async function myOrders(): Promise<Order[]> {
   const res = await axiosInstance.get(ENDPOINTS.ORDERS.LIST);
+  return res.data.data;
+}
+
+export async function getOrder(id: string): Promise<Order> {
+  const res = await axiosInstance.get(ENDPOINTS.ORDERS.DETAIL(id));
   return res.data.data;
 }
