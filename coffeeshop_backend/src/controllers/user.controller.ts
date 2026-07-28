@@ -43,10 +43,12 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import {
   googleLoginService, forgotPasswordRequestService, forgotPasswordVerifyService, forgotPasswordResetService,
+  updateProfileService,
 } from "../services/user.service";
 import {
   GoogleLoginSchema, RequestPasswordChangeSchema, ConfirmPasswordChangeSchema,
   ForgotPasswordRequestSchema, ForgotPasswordVerifySchema, ForgotPasswordResetSchema,
+  UpdateProfileSchema,
 } from "../types/user.type";
 import { sendPasswordChangeCode } from "../utils/mailer";
 
@@ -98,6 +100,23 @@ export async function confirmPasswordChange(req: Request, res: Response) {
     return sendSuccess(res, null, "Password updated successfully");
   } catch (error: unknown) {
     return sendError(res, error instanceof Error ? error.message : "Something went wrong", 500);
+  }
+}
+
+export async function updateProfile(req: Request, res: Response) {
+  try {
+    const parsed = UpdateProfileSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
+
+    const updateData: Record<string, any> = { ...parsed.data };
+    if ((req as any).file) {
+      updateData.avatar = `/avatars/${(req as any).file.filename}`;
+    }
+
+    const user = await updateProfileService((req as any).user.id, updateData);
+    return sendSuccess(res, user, "Profile updated successfully");
+  } catch (error: unknown) {
+    return sendError(res, error instanceof Error ? error.message : "Something went wrong", 400);
   }
 }
 

@@ -11,7 +11,7 @@ export const BeanSchema = z.object({
   weightGrams: z.coerce.number().positive().default(250),
   price: z.coerce.number().min(0, "Price cannot be negative"),
   stock: z.coerce.number().min(0, "Stock cannot be negative").default(0),
-  featured: z.coerce.boolean().default(false),
+  featured: z.preprocess((val) => (typeof val === "string" ? val === "true" : val), z.boolean()).default(false),
 });
 
 export const BeanUpdateSchema = BeanSchema.partial();
