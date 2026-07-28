@@ -27,7 +27,7 @@ export async function createBean(req: Request & { files?: any }, res: Response) 
     if (!parsed.success) return sendError(res, firstIssue(parsed), 400);
 
     const images = (req.files as Express.Multer.File[] | undefined)?.map(
-      (f) => `/beans/${f.filename}`
+      (f) => `/uploads/beans/${f.filename}`
     ) || [];
 
     const bean = await createBeanService(
@@ -61,7 +61,7 @@ export async function updateBean(req: Request & { files?: any }, res: Response) 
     const bean = await updateBeanService(req.params.id as string, parsed.data);
 
     const images = (req.files as Express.Multer.File[] | undefined)?.map(
-      (f) => `/beans/${f.filename}`
+      (f) => `/uploads/beans/${f.filename}`
     );
     if (images && images.length) {
       bean.images = images;
