@@ -1,5 +1,5 @@
 import axiosInstance from "./axios-instance";
-import { ENDPOINTS } from "./endpoints";
+import { ENDPOINTS } from "@/lib/endpoints";
 
 export interface Notification {
   _id: string;

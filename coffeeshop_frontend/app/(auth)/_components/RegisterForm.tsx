@@ -44,14 +44,14 @@ export default function RegisterForm() {
     setLoading(false);
 
     if (result.success) {
-      router.push(result.redirectTo || "/shop");
+      router.push("/login?registered=true");
     } else {
       setError(result.message || "Registration failed");
     }
   }
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-roast-700 bg-roast-900 p-8 shadow-2xl shadow-black/40">
+    <div className="w-full max-w-md rounded-2xl border border-roast-700 bg-roast-900 p-8 shadow-xl shadow-ink/10">
       <h1 className="font-display text-2xl text-ivory">Create your account</h1>
       <p className="mt-1 font-body text-sm text-ivory-dim">Join us for fresh-roasted beans, delivered.</p>
 
@@ -136,7 +136,7 @@ export default function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-roast-950 transition hover:bg-gold-bright disabled:opacity-60"
+          className="w-full rounded-lg bg-gold py-3 font-body text-sm font-semibold text-ink transition hover:bg-gold-bright disabled:opacity-60"
         >
           {loading ? "Creating account..." : "Create account"}
         </button>

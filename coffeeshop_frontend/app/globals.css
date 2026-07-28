@@ -1,26 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  /* Roast palette — deep espresso surfaces, warm gold accent */
-  --color-roast-950: #120d0a;
-  --color-roast-900: #1a130e;
-  --color-roast-850: #221a13;
-  --color-roast-800: #2b2118;
-  --color-roast-700: #3b2d20;
-  --color-roast-600: #55402c;
-  --color-roast-500: #6e4b3a;
+  /* Roast palette — warm cream surfaces, deep espresso text, gold accent */
+  --color-roast-950: #faf6ef;
+  --color-roast-900: #ffffff;
+  --color-roast-850: #f4ead6;
+  --color-roast-800: #ecdfc2;
+  --color-roast-700: #ddc691;
+  --color-roast-600: #c7a568;
+  --color-roast-500: #a9835a;
 
-  --color-ivory: #f2e9db;
-  --color-ivory-dim: #cfc2ac;
+  --color-ivory: #2b1c10;
+  --color-ivory-dim: #6b5842;
 
-  --color-gold: #cba135;
-  --color-gold-bright: #e0b94a;
-  --color-gold-dim: #8a7027;
+  /* Dark text reserved for use on top of gold/accent-colored surfaces (buttons, badges) */
+  --color-ink: #1a0f08;
 
-  --color-moss: #55704f;
-  --color-moss-bright: #7ea672;
+  --color-gold: #9c6c0c;
+  --color-gold-bright: #c4901f;
+  --color-gold-dim: #7a5a1f;
 
-  --color-clay: #a8583e;
+  --color-moss: #3f7a3a;
+  --color-moss-bright: #2f6b2a;
+
+  --color-clay: #9c4a30;
 
   --font-display: var(--font-fraunces), "Fraunces", serif;
   --font-body: var(--font-inter), "Inter", sans-serif;
@@ -46,7 +49,7 @@ body {
 
 ::selection {
   background-color: var(--color-gold);
-  color: var(--color-roast-950);
+  color: var(--color-ink);
 }
 
 ::-webkit-scrollbar {
@@ -95,4 +98,37 @@ body {
 .focus-ring:focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 2px;
+}
+
+/* Dual-thumb price range slider — two overlaid <input type="range"> tracks
+   with everything but the thumb made pointer-events:none, so each handle
+   can be dragged independently. */
+.range-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--color-gold);
+  border: 2px solid var(--color-roast-950);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.range-thumb::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--color-gold);
+  border: 2px solid var(--color-roast-950);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.range-thumb::-moz-range-track {
+  background: transparent;
 }

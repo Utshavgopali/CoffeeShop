@@ -9,7 +9,7 @@ import {
 } from "../repositories/order.repository";
 import { initiateKhaltiPayment, verifyKhaltiPayment } from "../utils/khalti";
 import { sendOrderConfirmation } from "../utils/mailer";
-import { notifyOrderPlaced, notifyOrderPaid } from "./notification.service";
+import { notifyOrderPlaced, notifyOrderPaid, notifyOrderCancelled } from "./notification.service";
 import User from "../models/user.model";
 import Order, { type IOrder } from "../models/order.model";
 
@@ -123,4 +123,28 @@ export async function getOrderService(id: string): Promise<IOrder> {
 
 export async function listAllOrdersService(page: number, limit: number) {
   return getAllOrdersPaginated(page, limit);
+}
+
+// Admin-initiated cancellation. Paid orders already decremented stock at
+// payment time, so cancelling one restores it; pending orders never
+// touched stock, so there's nothing to give back.
+export async function adminCancelOrderService(orderId: string): Promise<IOrder> {
+  const order = await findOrderById(orderId);
+  if (!order) throw new Error("Order not found");
+  if (order.status === "cancelled") throw new Error("Order is already cancelled");
+  if (order.status === "failed") throw new Error("Failed orders cannot be cancelled");
+
+  if (order.status === "paid") {
+    for (const item of order.items) {
+      const bean = await findBeanById(String(item.bean));
+      if (bean) await updateBeanById(String(bean._id), { stock: bean.stock + item.quantity });
+    }
+  }
+
+  order.status = "cancelled";
+  await order.save();
+
+  await notifyOrderCancelled(String(order.user), String(order._id));
+
+  return order;
 }

@@ -4,17 +4,24 @@ import Link from "next/link";
 import { Heart, Plus } from "lucide-react";
 import type { Bean } from "@/lib/api/beans";
 import RoastDial from "./roast-dial";
+import BeanIllustration from "./bean-illustration";
 import { useUser } from "@/context/UserContext";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { addToCart } from "@/lib/api/cart";
-import { addToWishlist } from "@/lib/api/wishlist";
 import { useState } from "react";
+
+const NEW_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const NOW = Date.now();
 
 export default function BeanCard({ bean }: { bean: Bean }) {
   const { user } = useUser();
   const { refreshCart } = useCart();
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const [busy, setBusy] = useState(false);
   const [added, setAdded] = useState(false);
+  const [wishlistBusy, setWishlistBusy] = useState(false);
+  const wishlisted = isWishlisted(bean._id);
 
   async function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
@@ -39,10 +46,16 @@ export default function BeanCard({ bean }: { bean: Bean }) {
       window.location.href = "/login";
       return;
     }
-    await addToWishlist(bean._id);
+    setWishlistBusy(true);
+    try {
+      await toggleWishlist(bean._id);
+    } finally {
+      setWishlistBusy(false);
+    }
   }
 
   const image = bean.images?.[0];
+  const isNew = NOW - new Date(bean.createdAt).getTime() < NEW_WINDOW_MS;
 
   return (
     <Link
@@ -54,14 +67,32 @@ export default function BeanCard({ bean }: { bean: Bean }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt={bean.name} className="h-full w-full object-cover" />
         ) : (
-          <BeanBagIllustration />
+          <BeanIllustration roastLevel={bean.roastLevel} category={bean.category} />
+        )}
+        {(bean.featured || isNew) && (
+          <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+            {bean.featured && (
+              <span className="rounded-full bg-gold px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-ink">
+                Best seller
+              </span>
+            )}
+            {isNew && (
+              <span className="rounded-full bg-moss px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-ivory">
+                New
+              </span>
+            )}
+          </div>
         )}
         <button
           onClick={handleWishlist}
-          className="absolute right-3 top-3 rounded-full bg-roast-950/70 p-2 text-ivory-dim backdrop-blur transition-colors hover:text-gold"
-          aria-label="Add to wishlist"
+          disabled={wishlistBusy}
+          className={`absolute right-3 top-3 rounded-full bg-roast-950/70 p-2 backdrop-blur transition-colors disabled:opacity-60 ${
+            wishlisted ? "text-clay" : "text-ivory-dim hover:text-gold"
+          }`}
+          aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          aria-pressed={wishlisted}
         >
-          <Heart size={16} />
+          <Heart size={16} fill={wishlisted ? "currentColor" : "none"} />
         </button>
         {bean.stock === 0 && (
           <span className="absolute bottom-3 left-3 rounded-full bg-clay px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-ivory">
@@ -76,7 +107,7 @@ export default function BeanCard({ bean }: { bean: Bean }) {
         <p className="line-clamp-1 font-body text-xs text-ivory-dim">{bean.tastingNotes.join(" · ")}</p>
         <RoastDial level={bean.roastLevel} />
 
-        <div className="mt-auto flex items-center justify-between pt-3">
+        <div className="mt-auto flex items-center justify-between gap-3 pt-3">
           <div>
             <span className="font-mono text-base font-semibold text-ivory">Rs {bean.price}</span>
             <span className="ml-1 font-mono text-[11px] text-ivory-dim">/ {bean.weightGrams}g</span>
@@ -84,24 +115,13 @@ export default function BeanCard({ bean }: { bean: Bean }) {
           <button
             onClick={handleAddToCart}
             disabled={busy || bean.stock === 0}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-roast-950 transition-transform hover:scale-105 disabled:opacity-40"
-            aria-label="Add to cart"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-gold px-4 py-2 font-body text-xs font-semibold text-ink transition hover:bg-gold-bright disabled:opacity-40"
           >
-            <Plus size={16} />
+            <Plus size={14} /> {busy ? "Adding..." : "Add to Cart"}
           </button>
         </div>
         {added && <span className="font-mono text-[11px] text-moss-bright">Added to cart</span>}
       </div>
     </Link>
-  );
-}
-
-function BeanBagIllustration() {
-  return (
-    <svg width="72" height="72" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <path d="M18 20c0-6 6-10 14-10s14 4 14 10l3 30c.5 5-3.5 9-8.5 9H23.5c-5 0-9-4-8.5-9l3-30Z" stroke="var(--color-gold-dim)" strokeWidth="1.5" />
-      <path d="M25 12c-1-2-1-4 .5-6M32 10c0-2.2.6-3.8 2-5.2M39 12c1-2 1-4-.5-6" stroke="var(--color-gold-dim)" strokeWidth="1.2" strokeLinecap="round" />
-      <circle cx="32" cy="34" r="6" stroke="var(--color-gold-dim)" strokeWidth="1.2" />
-    </svg>
   );
 }

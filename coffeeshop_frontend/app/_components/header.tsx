@@ -2,21 +2,35 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { ShoppingBag, Heart, Bell, User as UserIcon, Menu, X } from "lucide-react";
 import Logo from "./logo";
 import { useUser } from "@/context/UserContext";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 const NAV_LINKS = [
   { href: "/shop", label: "Shop" },
-  { href: "/shop?category=single-origin", label: "Single Origin" },
   { href: "/shop?category=espresso", label: "Espresso" },
+  { href: "/about", label: "About Us" },
 ];
 
 export default function Header() {
   const { user, logout, loading } = useUser();
   const { itemCount } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Both "Shop" and "Espresso" resolve to /shop; reading the ?category=
+  // value would require useSearchParams, which forces a Suspense boundary
+  // wherever Header is rendered. Keep this pathname-only: "Shop" lights up
+  // for the whole /shop section, "Espresso" is a plain link.
+  function isActive(href: string) {
+    const path = href.split("?")[0];
+    if (path !== pathname) return false;
+    return !href.includes("category=espresso");
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-roast-700 bg-roast-950/95 backdrop-blur">
@@ -28,7 +42,9 @@ export default function Header() {
             <Link
               key={link.label}
               href={link.href}
-              className="font-body text-sm text-ivory-dim transition-colors hover:text-gold focus-ring rounded-sm"
+              className={`border-b-2 pb-1 font-body text-sm transition-colors focus-ring rounded-sm ${
+                isActive(link.href) ? "border-gold text-gold" : "border-transparent text-ivory-dim hover:text-gold"
+              }`}
             >
               {link.label}
             </Link>
@@ -37,8 +53,13 @@ export default function Header() {
 
         <div className="flex items-center gap-4">
           {user && (
-            <Link href="/wishlist" className="hidden text-ivory-dim hover:text-gold sm:block focus-ring rounded-sm" aria-label="Wishlist">
+            <Link href="/wishlist" className="relative hidden text-ivory-dim hover:text-gold sm:block focus-ring rounded-sm" aria-label="Wishlist">
               <Heart size={20} />
+              {wishlistItems.length > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-gold font-mono text-[10px] font-semibold text-ink">
+                  {wishlistItems.length}
+                </span>
+              )}
             </Link>
           )}
           {user && (
@@ -49,7 +70,7 @@ export default function Header() {
           <Link href="/cart" className="relative text-ivory-dim hover:text-gold focus-ring rounded-sm" aria-label="Cart">
             <ShoppingBag size={20} />
             {itemCount > 0 && (
-              <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-gold font-mono text-[10px] font-semibold text-roast-950">
+              <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-gold font-mono text-[10px] font-semibold text-ink">
                 {itemCount}
               </span>
             )}
@@ -58,7 +79,7 @@ export default function Header() {
           {!loading && !user && (
             <Link
               href="/login"
-              className="rounded-full border border-gold-dim px-4 py-1.5 font-body text-sm text-gold transition-colors hover:bg-gold hover:text-roast-950 focus-ring"
+              className="rounded-full border border-gold-dim px-4 py-1.5 font-body text-sm text-gold transition-colors hover:bg-gold hover:text-ink focus-ring"
             >
               Sign in
             </Link>

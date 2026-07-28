@@ -33,9 +33,10 @@ export async function loginService(data: LoginDTO): Promise<AuthResponse> {
 }
 
 import crypto from "crypto";
-import { findUserByGoogleId, createGoogleUser } from "../repositories/user.repository";
+import { findUserByGoogleId, createGoogleUser, updateUserById } from "../repositories/user.repository";
 import { verifyGoogleIdToken } from "../utils/googleAuth";
 import { sendForgotPasswordCode } from "../utils/mailer";
+import type { IUser } from "../models/user.model";
 
 export async function googleLoginService(idToken: string): Promise<AuthResponse> {
   const profile = await verifyGoogleIdToken(idToken);
@@ -54,6 +55,19 @@ export async function googleLoginService(idToken: string): Promise<AuthResponse>
   }
   const token = jwt.sign({ id: String(user._id) }, JWT_SECRET, { expiresIn: "7d" });
   return toAuthResponse(user, token);
+}
+
+export async function updateProfileService(
+  userId: string,
+  data: { name?: string; email?: string; avatar?: string }
+): Promise<IUser> {
+  if (data.email) {
+    const existing = await findUserByEmail(data.email);
+    if (existing && String(existing._id) !== userId) throw new Error("Email already in use");
+  }
+  const user = await updateUserById(userId, data);
+  if (!user) throw new Error("User not found");
+  return user;
 }
 
 export async function forgotPasswordRequestService(email: string): Promise<void> {

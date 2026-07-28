@@ -1,6 +1,6 @@
 "use server";
 import { setTokenCookie, storeUserData, clearAuthCookies, getTokenCookie } from "@/lib/cookies";
-import { ENDPOINTS } from "@/lib/api/endpoints";
+import { ENDPOINTS } from "@/lib/endpoints";
 
 const API = "http://localhost:5000";
 
@@ -11,6 +11,15 @@ interface AuthApiResponse {
     token: string;
     user: { id: string; name: string; email: string; role: string; avatar?: string; provider: string };
   };
+}
+
+interface AuthUserRecord {
+  _id: string;
+  name: string;
+  email: string;
+  role: "user" | "admin";
+  avatar?: string;
+  provider: "local" | "google";
 }
 
 async function persistAuth(data: NonNullable<AuthApiResponse["data"]>) {
@@ -51,8 +60,7 @@ export async function registerAction(formData: FormData) {
     const result = (await res.json()) as AuthApiResponse;
     if (!res.ok || !result.data) return { success: false, message: result.message || "Registration failed" };
 
-    const redirectTo = await persistAuth(result.data);
-    return { success: true, user: result.data.user, redirectTo };
+    return { success: true, message: "Account created successfully." };
   } catch {
     return { success: false, message: "Something went wrong." };
   }
@@ -91,7 +99,7 @@ export async function whoamiAction() {
     cache: "no-store",
   });
   if (!res.ok) return null;
-  const data = (await res.json()) as { success: boolean; data: any };
+  const data = (await res.json()) as { success: boolean; data: AuthUserRecord };
   return data.data;
 }
 
@@ -103,7 +111,7 @@ export async function updateProfileAction(formData: FormData) {
     body: formData,
   });
   if (!res.ok) throw new Error("Update failed");
-  const data = (await res.json()) as { success: boolean; data: any };
+  const data = (await res.json()) as { success: boolean; data: AuthUserRecord };
 
   await storeUserData({
     id: data.data._id,

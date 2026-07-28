@@ -31,6 +31,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial + user-change cart fetch
     refreshCart();
   }, [refreshCart]);
 
